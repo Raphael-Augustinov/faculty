@@ -1,0 +1,93 @@
+module mux_2s_1b_tb (
+    output reg [3:0] d,
+    output reg [1:0]s,
+    output o
+    
+    );
+    
+mux_2s_1b DUT // Device Under Test, Circuit Under Test
+    ( .d(d),
+      .s(s),
+      .o(o)
+      );
+      
+integer i; // vector pe 6 biti
+
+initial begin //{
+
+ {s,d} = 6'd0;
+ 
+ for (i=0; i < 64; i=i+1) 
+  // i++ este interzis in Verilog
+ #50 {s,d} = i[5:0];
+ 
+ end //}
+ 
+ endmodule
+
+
+----------------
+
+module reg_file_4x8 (
+  
+  input [7:0] wr_data,
+  input [1:0] wr_addr,rd_addr,
+  input wr_e, clr,clk, rst_b,
+  output [7:0] rd_data
+  );
+  
+wire [7:0] q0,q1,q2,q3;
+wire [3:0]w;
+
+dec_2x4 decoder (.s(wr_addr), .e(wr_e), .o(w));
+
+reg_param # ( .w(8)) reg0 (.d(wr_data), .clk(clk), .rst_b(rst_b), .clr(clr), .ld(w[0]), .q(q0));
+reg_param # ( .w(8)) reg1 (.d(wr_data), .clk(clk), .rst_b(rst_b), .clr(clr), .ld(w[1]), .q(q1));
+reg_param # ( .w(8)) reg2 (.d(wr_data), .clk(clk), .rst_b(rst_b), .clr(clr), .ld(w[2]), .q(q2));
+reg_param # ( .w(8)) reg3 (.d(wr_data), .clk(clk), .rst_b(rst_b), .clr(clr), .ld(w[3]), .q(q3));
+
+mux_2s_param #  (.l(8)) multiplexer (.d0(q0), .d1(q1), .d2(q2), .d3(q3), .s(rd_addr), .o(rd_data));
+
+endmodule
+
+
+---
+
+module mux_2s_param #  ( parameter l=2)
+  (
+  
+  input [l-1:0] d0,d1,d2,d3,
+  input [1:0]s,
+  output [l-1:0]o
+  );
+  
+assign o = s[1] ? (s[0] ? d3:d2) : (s[0] ? d1:d0);
+
+endmodule
+
+--------------
+
+module reg_param # (
+                      parameter w=16, // default value
+                      parameter iv = {w{1'b0}} // 16 biti de zero
+                      )
+                      
+                      ( 
+                        input [w-1:0]d,
+                        input ld,clk,rst_b,clr,
+                        output reg [w-1:0] q
+                        );
+
+always @(posedge clk, negedge rst_b, posedge clr)
+begin //{
+
+    if (!rst_b || clr || !ld)
+      
+      q <= iv;
+      
+    else
+      q <= d;
+      
+end
+
+endmodule
